@@ -76,11 +76,11 @@ typedef struct line_list_s
 typedef struct r_var_list
 {
 	int len_var;
-OBOBOBOBOBOBOB	char *val;
-OBOBOBOB	int len_val;
-OBOB	struct r_var_list *next;
+	char *val;
+	int len_val;
+	struct r_var_list *next;
 } r_var;
-OB
+
 /**
  * struct builtin_s - Builtin struct for command args.
  * @name: The name of the command builtin i.e cd, exit, env
@@ -93,13 +93,13 @@ typedef struct builtin_s
 } builtin_t;
 
 /* lists_1.c */
-OAOAsep_list *add_sep_node_end(sep_list **head, char sep);
-OAOAvoid free_sep_list(sep_list **head);
+sep_list *add_sep_node_end(sep_list **head, char sep);
+void free_sep_list(sep_list **head);
 line_list *add_line_node_end(line_list **head, char *line);
-OAOAOAvoid free_line_list(line_list **head);
-OA
-OA/* lists_2.c */
-OAr_var *add_rvar_node(r_var **head, int lvar, char *var, int lval);
+void free_line_list(line_list **head);
+
+/* lists_2.c */
+r_var *add_rvar_node(r_var **head, int lvar, char *var, int lval);
 void free_rvar_list(r_var **head);
 
 /* strings_1.c */
@@ -190,22 +190,19 @@ int get_len(int n);
 char *aux_itoa(int n);
 int _atoi(char *s);
 
-/* aux_error1.c */
+/* errors_2.c */
 char *strcat_cd(data_shell *, char *, char *, char *);
 char *error_get_cd(data_shell *datash);
 char *error_not_found(data_shell *datash);
 char *error_exit_shell(data_shell *datash);
-
-/* aux_error2.c */
 char *error_get_alias(char **args);
+
+/* get_error.c */
+int get_error(data_shell *datash, int eval);
 char *error_env(data_shell *datash);
 char *error_syntax(char **args);
 char *error_permission(char **args);
 char *error_path_126(data_shell *datash);
-
-
-/* get_error.c */
-int get_error(data_shell *datash, int eval);
 
 /* get_sigint.c */
 void get_sigint(int sig);
