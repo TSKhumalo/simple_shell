@@ -1,89 +1,106 @@
 #include "shell.h"
 
 /**
- * _strlen - returns the length of a string
- * @str: string beingf checked
- * Return: length of the string
+ * _strcat - concatenate two strings
+ * @dest: char pointer the dest of the copied str
+ * @src: const char pointer the source of str
+ * Return: the dest
  */
-int _strlen(char *str)
+char *_strcat(char *dest, const char *src)
 {
-	int i = 0;
+	int i;
+	int j;
 
-	if (!str)
-	{
-		return (0);
-	}
+	for (i = 0; dest[i] != '\0'; i++)
+		;
 
-	while (*str++)
+	for (j = 0; src[j] != '\0'; j++)
 	{
+		dest[i] = src[j];
 		i++;
 	}
-	return (i);
-}
 
+	dest[i] = '\0';
+	return (dest);
+}
 /**
- * _strcmp - performs alphabetic comparison of two strings.
- * @s1: string one
- * @s2: string two
- * Return: comparison result
+ * *_strcpy - Copies the string pointed to by src.
+ * @dest: Type char pointer the dest of the copied str
+ * @src: Type char pointer the source of str
+ * Return: the dest.
+ */
+char *_strcpy(char *dest, char *src)
+{
+
+	size_t a;
+
+	for (a = 0; src[a] != '\0'; a++)
+	{
+		dest[a] = src[a];
+	}
+	dest[a] = '\0';
+
+	return (dest);
+}
+/**
+ * _strcmp - Function that compares two strings.
+ * @s1: type str compared
+ * @s2: type str compared
+ * Return: Always 0.
  */
 int _strcmp(char *s1, char *s2)
 {
-	while (*s1 && *s2)
-	{
-		if (*s1 != *s2)
-		{
-			return (*s1 - *s2);
-		}
-		s1++;
-		s2++;
-	}
-	if (*s1 == *s2)
-	{
-		return (0);
-	}
-	else
-	{
-		return (*s1 < *s2 ? -1 : 1);
-	}
+	int i;
+
+	for (i = 0; s1[i] == s2[i] && s1[i]; i++)
+		;
+
+	if (s1[i] > s2[i])
+		return (1);
+	if (s1[i] < s2[i])
+		return (-1);
+	return (0);
 }
-
 /**
- * starts_with - checks if needle starts with haystack
- * @haystack: string to search
- * @needle: substring being searched
- * Return: address of next char of haystack or NULL
+ * _strchr - locates a character in a string,
+ * @s: string.
+ * @c: character.
+ * Return: the pointer to the first occurrence of the character c.
  */
-char *starts_with(const char *haystack, const char *needle)
+char *_strchr(char *s, char c)
 {
-	while (*needle)
-	{
-		if (*needle++ != *haystack++)
-		{
-			return (NULL);
-		}
-	}
-	return ((char *)haystack);
+	unsigned int i = 0;
+
+	for (; *(s + i) != '\0'; i++)
+		if (*(s + i) == c)
+			return (s + i);
+	if (*(s + i) == c)
+		return (s + i);
+	return ('\0');
 }
-
 /**
- * _strcat - concatenates two strings
- * @dest: string destination
- * @src: string source
- * Return: pointer to dest
+ * _strspn - gets the length of a prefix substring.
+ * @s: initial segment.
+ * @accept: accepted bytes.
+ * Return: the number of accepted bytes.
  */
-char *_strcat(char *dest, char *src)
+int _strspn(char *s, char *accept)
 {
-	char *pointr = dest;
+	int i, j, bool;
 
-	while (*dest)
+	for (i = 0; *(s + i) != '\0'; i++)
 	{
-		dest++;
+		bool = 1;
+		for (j = 0; *(accept + j) != '\0'; j++)
+		{
+			if (*(s + i) == *(accept + j))
+			{
+				bool = 0;
+				break;
+			}
+		}
+		if (bool == 1)
+			break;
 	}
-	while (*src)
-	{
-		*dest++ = *src++;
-	}
-	*dest = *src;
-	return (pointr);
+	return (i);
 }

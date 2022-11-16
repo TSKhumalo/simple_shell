@@ -1,176 +1,121 @@
 #include "shell.h"
-/**
- * _getline - gets the next line of input from STDIN
- * @info: return info struct
- * @ptr: address of pointer to buffer, preallocated or NULL
- * @length: size of preallocated ptr buffer if not NULL
- * Return: s
- */
-int _getline(info_t *info, char **ptr, size_t *length)
-{
-	static char buf[READ_BUF_SIZE];
-	static size_t i, len;
-	size_t k;
-	ssize_t r = 0, s = 0;
-	char *p = NULL, *new_p = NULL, *c;
-
-	p = *ptr;
-	if (p && length)
-		s = *length;
-
-	if (i == len)
-		i = len = 0;
-
-	r = read_buf(info, buf, &len);
-	if (r == -1 || (r == 0 && len == 0))
-		return (-1);
-
-	c = _strchr(buf + i, '\n');
-	k = c ? 1 + (unsigned int)(c - buf) : len;
-	new_p = _realloc(p, s, s ? s + k : k + 1);
-
-	if (!new_p) /* MALLOC FAILURE! */
-		return (p ? free(p), -1 : -1);
-
-	if (s)
-		_strncat(new_p, buf + i, k - i);
-
-	else
-		_strncpy(new_p, buf + i, k - i + 1);
-
-	s += k - i;
-	i = k;
-	p = new_p;
-
-	if (length)
-		*length = s;
-	*ptr = p;
-	return (s);
-}
 
 /**
- * get_input - gets a line minus the newline
- * @info: parameter struct
+ * read_line - reads the input string.
  *
- * Return: bytes read
+ * @i_eof: return value of getline function
+ * Return: input string
  */
-ssize_t get_input(info_t *info)
+char *read_line(int *i_eof)
 {
-	static char *buf; /* the ';' command chain buffer */
-	static size_t i, j, len;
-	ssize_t r = 0;
-	char **buf_p = &(info->arg), *p;
+	char *input = NULL;
+	size_t bufsize = 0;
 
-	_putchar(BUF_FLUSH);
-	r = input_buf(info, &buf, &len);
-	if (r == -1) /* EOF */
+	*i_eof = getline(&input, &bufsize, stdin);
+
+	return (input);
+}
+
+/**
+ * bring_line - assigns the line var for get_line
+ * @lineptr: Buffer that store the input str
+ * @buffer: str that is been called to line
+ * @n: size of line
+ * @j: size of buffer
+ */
+void bring_line(char **lineptr, size_t *n, char *buffer, size_t j)
+{
+
+	if (*lineptr == NULL)
 	{
+		if  (j > BUFSIZE)
+			*n = j;
+
+		else
+			*n = BUFSIZE;
+		*lineptr = buffer;
+	}
+	else if (*n < j)
+	{
+		if (j > BUFSIZE)
+			*n = j;
+		else
+			*n = BUFSIZE;
+		*lineptr = buffer;
+	}
+	else
+	{
+		_strcpy(*lineptr, buffer);
+		free(buffer);
+	}
+}
+/**
+ * get_line - Read inpt from stream
+ * @lineptr: buffer that stores the input
+ * @n: size of lineptr
+ * @stream: stream to read from
+ * Return: The number of bytes
+ */
+ssize_t get_line(char **lineptr, size_t *n, FILE *stream)
+{
+	int i;
+	static ssize_t input;
+	ssize_t retval;
+	char *buffer;
+	char t = 'z';
+
+	if (input == 0)
+		fflush(stream);
+	else
 		return (-1);
-	}
-	if (len)	/* we have commands left in the chain buffer */
+	input = 0;
+
+	buffer = malloc(sizeof(char) * BUFSIZE);
+	if (buffer == 0)
+		return (-1);
+	while (t != '\n')
 	{
-		j = i; /* init new iterator to current buf position */
-		p = buf + i; /* get pointer for return */
-
-		check_chain(info, buf, &j, i, len);
-		while (j < len) /* iterate to semicolon or end */
+		i = read(STDIN_FILENO, &t, 1);
+		if (i == -1 || (i == 0 && input == 0))
 		{
-			if (is_chain(info, buf, &j))
-			{
-				break;
-			}
-			j++;
+			free(buffer);
+			return (-1);
 		}
-
-		i = j + 1; /* increment past nulled ';'' */
-		if (i >= len) /* reached end of buffer? */
+		if (i == 0 && input != 0)
 		{
-			i = len = 0; /* reset position and length */
-			info->cmd_buf_type = CMD_NORM;
+			input++;
+			break;
 		}
-
-		*buf_p = p; /* pass back pointer to current command position */
-		return (_strlen(p)); /* return length of current command */
+		if (input >= BUFSIZE)
+			buffer = _realloc(buffer, input, input + 1);
+		buffer[input] = t;
+		input++;
 	}
-
-	*buf_p = buf; /* else not a chain, pass back buffer from _getline() */
-	return (r); /* return length of buffer from _getline() */
+	buffer[input] = '\0';
+	bring_line(lineptr, n, buffer, input);
+	retval = input;
+	if (i != 0)
+		input = 0;
+	return (retval);
 }
 
 /**
- * input_buf - buffers chained commands
- * @info: return info struct
- * @buf: address of buffer
- * @len: address of len var
- * Return: no. of read bytes
+ * exec_line - finds builtins and commands
+ *
+ * @datash: data relevant (args)
+ * Return: 1 on success.
  */
-ssize_t input_buf(info_t *info, char **buf, size_t *len)
+int exec_line(data_shell *datash)
 {
-	ssize_t r = 0;
-	size_t len_p = 0;
+	int (*builtin)(data_shell *datash);
 
-	if (!*len) /* if nothing left in the buffer, fill it */
-	{
-		/*bfree((void **)info->cmd_buf);*/
-		free(*buf);
-		*buf = NULL;
-		signal(SIGINT, sigintHandler);
-#if USE_GETLINE
-		r = getline(buf, &len_p, stdin);
-#else
-		r = _getline(info, buf, &len_p);
-#endif
-		if (r > 0)
-		{
-			if ((*buf)[r - 1] == '\n')
-			{
-				(*buf)[r - 1] = '\0'; /* remove trailing newline */
-				r--;
-			}
-			info->linecount_flag = 1;
-			remove_comments(*buf);
-			build_history_list(info, *buf, info->histcount++);
-			/* if (_strchr(*buf, ';')) is this a command chain? */
-			{
-				*len = r;
-				info->cmd_buf = buf;
-			}
-		}
-	}
-	return (r);
-}
+	if (datash->args[0] == NULL)
+		return (1);
 
-/**
- * read_buf - reads a buffer
- * @info: return info struct
- * @buf: buffer
- * @i: size
- * Return: r
- */
-ssize_t read_buf(info_t *info, char *buf, size_t *i)
-{
-	ssize_t r = 0;
+	builtin = get_builtin(datash->args[0]);
 
-	if (*i)
-	{
-		return (0);
-	}
-	r = read(info->readfd, buf, READ_BUF_SIZE);
-	if (r >= 0)
-	{
-		*i = r;
-	}
-	return (r);
-}
+	if (builtin != NULL)
+		return (builtin(datash));
 
-/**
- * sigintHandler - blocks ctrl-C
- * @sign_num: signal number
- * Return: void
- */
-void sigintHandler(__attribute__((unused))int sign_num)
-{
-	_puts("\n");
-	_puts("$ ");
-	_putchar(BUF_FLUSH);
+	return (cmd_exec(datash));
 }

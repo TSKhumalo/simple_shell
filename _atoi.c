@@ -1,88 +1,100 @@
 #include "shell.h"
-/**
- * interactive - checks if shell is interactive mode
- * @info: struct address
- * Return: 1 if interactive mode, else 0.
- */
-int interactive(info_t *info)
-{
-	return (isatty(STDIN_FILENO) && info->readfd <= 2);
-}
 
 /**
- *_isalpha - checks if character is an alphabet
- *@c: input character
- *Return: 1 if c is alphabetic, else 0.
+ * get_len - Get the lenght of a number.
+ * @n: type int number.
+ * Return: Lenght of a number.
  */
-
-int _isalpha(int c)
+int get_len(int n)
 {
-	if ((c >= 97 && c <= 122) || (c >= 65 && c <= 90))
+	unsigned int n1;
+	int lenght = 1;
+
+	if (n < 0)
 	{
-		return (1);
+		lenght++;
+		n1 = n * -1;
 	}
 	else
 	{
-		return (0);
+		n1 = n;
 	}
-}
-
-/**
- * is_delim - checks if character is a delimiter
- * @c: character to check
- * @delim: delimeter string
- * Return: if true = 1, else = 0
- */
-int is_delim(char c, char *delim)
-{
-	while (*delim)
+	while (n1 > 9)
 	{
-		if (*delim++ == c)
-		{
-			return (1);
-		}
+		lenght++;
+		n1 = n1 / 10;
 	}
-	return (0);
+
+	return (lenght);
+}
+/**
+ * aux_itoa - function converts int to string.
+ * @n: type int number
+ * Return: String.
+ */
+char *aux_itoa(int n)
+{
+	unsigned int n1;
+	int lenght = get_len(n);
+	char *buffer;
+
+	buffer = malloc(sizeof(char) * (lenght + 1));
+	if (buffer == 0)
+		return (NULL);
+
+	*(buffer + lenght) = '\0';
+
+	if (n < 0)
+	{
+		n1 = n * -1;
+		buffer[0] = '-';
+	}
+	else
+	{
+		n1 = n;
+	}
+
+	lenght--;
+	do {
+		*(buffer + lenght) = (n1 % 10) + '0';
+		n1 = n1 / 10;
+		lenght--;
+	}
+	while (n1 > 0)
+		;
+	return (buffer);
 }
 
 /**
- *_atoi - converts string to integer
- *@s: string to be converted
- *Return: 0 if no numbers in string, else converted number
+ * _atoi - converts a string to an integer.
+ * @s: input string.
+ * Return: integer.
  */
-
 int _atoi(char *s)
 {
-	int i, sign = 1, flag = 0, display;
-	unsigned int res = 0;
+	unsigned int count = 0, size = 0, oi = 0, pn = 1, m = 1, i;
 
-	for (i = 0;  s[i] != '\0' && flag != 2; i++)
+	while (*(s + count) != '\0')
 	{
-		if (s[i] == '-')
-		{
-			sign *= -1;
-		}
+		if (size > 0 && (*(s + count) < '0' || *(s + count) > '9'))
+			break;
 
-		if (s[i] >= '0' && s[i] <= '9')
+		if (*(s + count) == '-')
+			pn *= -1;
+
+		if ((*(s + count) >= '0') && (*(s + count) <= '9'))
 		{
-			flag = 1;
-			res *= 10;
-			res += (s[i] - '0');
+			if (size > 0)
+				m *= 10;
+			size++;
 		}
-		else if (flag == 1)
-		{
-			flag = 2;
-		}
+		count++;
 	}
 
-	if (sign == -1)
+	for (i = count - size; i < count; i++)
 	{
-		display = -res;
+		oi = oi + ((*(s + i) - 48) * m);
+		m /= 10;
 	}
-	else
-	{
-		display = res;
-	}
-
-	return (display);
+	return (oi * pn);
 }

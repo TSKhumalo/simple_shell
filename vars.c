@@ -1,154 +1,183 @@
 #include "shell.h"
 
 /**
- * is_chain - test if current char in buffer is a chain delimeter
- * @info: the parameter struct
- * @buf: the char buffer
- * @p: address of current position in buf
+ * check_env - checks if the typed variable is an env variable
  *
- * Return: 1 if chain delimeter, 0 otherwise
+ * @h: head of linked list
+ * @in: input string
+ * @data: data structure
+ * Return: no return
  */
-int is_chain(info_t *info, char *buf, size_t *p)
+void check_env(r_var **h, char *in, data_shell *data)
 {
-	size_t j = *p;
+	int row, chr, j, lval;
+	char **_envr;
 
-	if (buf[j] == '|' && buf[j + 1] == '|')
+	_envr = data->_environ;
+	for (row = 0; _envr[row]; row++)
 	{
-		buf[j] = 0;
-		j++;
-		info->cmd_buf_type = CMD_OR;
+		for (j = 1, chr = 0; _envr[row][chr]; chr++)
+		{
+			if (_envr[row][chr] == '=')
+			{
+				lval = _strlen(_envr[row] + chr + 1);
+				add_rvar_node(h, j, _envr[row] + chr + 1, lval);
+				return;
+			}
+
+			if (in[j] == _envr[row][chr])
+				j++;
+			else
+				break;
+		}
 	}
-	else if (buf[j] == '&' && buf[j + 1] == '&')
+
+	for (j = 0; in[j]; j++)
 	{
-		buf[j] = 0;
-		j++;
-		info->cmd_buf_type = CMD_AND;
+		if (in[j] == ' ' || in[j] == '\t' || in[j] == ';' || in[j] == '\n')
+			break;
 	}
-	else if (buf[j] == ';') /* found end of this command */
-	{
-		buf[j] = 0; /* replace semicolon with null */
-		info->cmd_buf_type = CMD_CHAIN;
-	}
-	else
-		return (0);
-	*p = j;
-	return (1);
+
+	add_rvar_node(h, j, NULL, 0);
 }
 
 /**
- * check_chain - checks we should continue chaining based on last status
- * @info: the parameter struct
- * @buf: the char buffer
- * @p: address of current position in buf
- * @i: starting position in buf
- * @len: length of buf
+ * check_vars - check if the typed variable is $$ or $?
  *
- * Return: Void
+ * @h: head of the linked list
+ * @in: input string
+ * @st: last status of the Shell
+ * @data: data structure
+ * Return: no return
  */
-void check_chain(info_t *info, char *buf, size_t *p, size_t i, size_t len)
+int check_vars(r_var **h, char *in, char *st, data_shell *data)
 {
-	size_t j = *p;
+	int i, lst, lpd;
 
-	if (info->cmd_buf_type == CMD_AND)
+	lst = _strlen(st);
+	lpd = _strlen(data->pid);
+
+	for (i = 0; in[i]; i++)
 	{
-		if (info->status)
+		if (in[i] == '$')
 		{
-			buf[i] = 0;
-			j = len;
+			if (in[i + 1] == '?')
+				add_rvar_node(h, 2, st, lst), i++;
+			else if (in[i + 1] == '$')
+				add_rvar_node(h, 2, data->pid, lpd), i++;
+			else if (in[i + 1] == '\n')
+				add_rvar_node(h, 0, NULL, 0);
+			else if (in[i + 1] == '\0')
+				add_rvar_node(h, 0, NULL, 0);
+			else if (in[i + 1] == ' ')
+				add_rvar_node(h, 0, NULL, 0);
+			else if (in[i + 1] == '\t')
+				add_rvar_node(h, 0, NULL, 0);
+			else if (in[i + 1] == ';')
+				add_rvar_node(h, 0, NULL, 0);
+			else
+				check_env(h, in + i, data);
 		}
 	}
-	if (info->cmd_buf_type == CMD_OR)
-	{
-		if (!info->status)
-		{
-			buf[i] = 0;
-			j = len;
-		}
-	}
 
-	*p = j;
+	return (i);
 }
 
 /**
- * replace_alias - replaces an aliases in the tokenized string
- * @info: the parameter struct
+ * replaced_input - replaces string into variables
  *
- * Return: 1 if replaced, 0 otherwise
+ * @head: head of the linked list
+ * @input: input string
+ * @new_input: new input string (replaced)
+ * @nlen: new length
+ * Return: replaced string
  */
-int replace_alias(info_t *info)
+char *replaced_input(r_var **head, char *input, char *new_input, int nlen)
 {
-	int i;
-	list_t *node;
-	char *p;
+	r_var *indx;
+	int i, j, k;
 
-	for (i = 0; i < 10; i++)
+	indx = *head;
+	for (j = i = 0; i < nlen; i++)
 	{
-		node = node_starts_with(info->alias, info->argv[0], '=');
-		if (!node)
-			return (0);
-		free(info->argv[0]);
-		p = _strchr(node->str, '=');
-		if (!p)
-			return (0);
-		p = _strdup(p + 1);
-		if (!p)
-			return (0);
-		info->argv[0] = p;
+		if (input[j] == '$')
+		{
+			if (!(indx->len_var) && !(indx->len_val))
+			{
+				new_input[i] = input[j];
+				j++;
+			}
+			else if (indx->len_var && !(indx->len_val))
+			{
+				for (k = 0; k < indx->len_var; k++)
+					j++;
+				i--;
+			}
+			else
+			{
+				for (k = 0; k < indx->len_val; k++)
+				{
+					new_input[i] = indx->val[k];
+					i++;
+				}
+				j += (indx->len_var);
+				i--;
+			}
+			indx = indx->next;
+		}
+		else
+		{
+			new_input[i] = input[j];
+			j++;
+		}
 	}
-	return (1);
+
+	return (new_input);
 }
 
 /**
- * replace_vars - replaces vars in the tokenized string
- * @info: the parameter struct
+ * rep_var - calls functions to replace string into vars
  *
- * Return: 1 if replaced, 0 otherwise
+ * @input: input string
+ * @datash: data structure
+ * Return: replaced string
  */
-int replace_vars(info_t *info)
+char *rep_var(char *input, data_shell *datash)
 {
-	int i = 0;
-	list_t *node;
+	r_var *head, *indx;
+	char *status, *new_input;
+	int olen, nlen;
 
-	for (i = 0; info->argv[i]; i++)
+	status = aux_itoa(datash->status);
+	head = NULL;
+
+	olen = check_vars(&head, input, status, datash);
+
+	if (head == NULL)
 	{
-		if (info->argv[i][0] != '$' || !info->argv[i][1])
-			continue;
-
-		if (!_strcmp(info->argv[i], "$?"))
-		{
-			replace_string(&(info->argv[i]),
-				_strdup(convert_number(info->status, 10, 0)));
-			continue;
-		}
-		if (!_strcmp(info->argv[i], "$$"))
-		{
-			replace_string(&(info->argv[i]),
-				_strdup(convert_number(getpid(), 10, 0)));
-			continue;
-		}
-		node = node_starts_with(info->env, &info->argv[i][1], '=');
-		if (node)
-		{
-			replace_string(&(info->argv[i]),
-				_strdup(_strchr(node->str, '=') + 1));
-			continue;
-		}
-		replace_string(&info->argv[i], _strdup(""));
-
+		free(status);
+		return (input);
 	}
-	return (0);
-}
 
-/**
- * replace_string - replaces string
- * @old: address of old string
- * @new: new string
- *
- * Return: 1 if replaced, 0 otherwise
- */
-int replace_string(char **old, char *new)
-{
-	free(*old);
-	*old = new;
-	return (1);
+	indx = head;
+	nlen = 0;
+
+	while (indx != NULL)
+	{
+		nlen += (indx->len_val - indx->len_var);
+		indx = indx->next;
+	}
+
+	nlen += olen;
+
+	new_input = malloc(sizeof(char) * (nlen + 1));
+	new_input[nlen] = '\0';
+
+	new_input = replaced_input(&head, input, new_input, nlen);
+
+	free(input);
+	free(status);
+	free_rvar_list(&head);
+
+	return (new_input);
 }

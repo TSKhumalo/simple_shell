@@ -1,81 +1,50 @@
 #include "shell.h"
 
 /**
- * set_info - initializes info_t struct
- * @info: struct address
- * @av: argument vector
+ * copy_info - copies info to create
+ * a new env or alias
+ * @name: name (env or alias)
+ * @value: value (env or alias)
+ *
+ * Return: new env or alias.
  */
-void set_info(info_t *info, char **av)
+char *copy_info(char *name, char *value)
 {
-	int i = 0;
+	char *new;
+	int len_name, len_value, len;
 
-	info->fname = av[0];
-	if (info->arg)
-	{
-		info->argv = strtow(info->arg, " \t");
-		if (!info->argv)
-		{
+	len_name = _strlen(name);
+	len_value = _strlen(value);
+	len = len_name + len_value + 2;
+	new = malloc(sizeof(char) * (len));
+	_strcpy(new, name);
+	_strcat(new, "=");
+	_strcat(new, value);
+	_strcat(new, "\0");
 
-			info->argv = malloc(sizeof(char *) * 2);
-			if (info->argv)
-			{
-				info->argv[0] = _strdup(info->arg);
-				info->argv[1] = NULL;
-			}
-		}
-		for (i = 0; info->argv && info->argv[i]; i++)
-			;
-		info->argc = i;
-
-		replace_alias(info);
-		replace_vars(info);
-	}
+	return (new);
 }
 
-/**
- * free_info - frees info_t struct fields
- * @info: struct address
- * @all: true if freeing all fields
- */
-void free_info(info_t *info, int all)
-{
-	ffree(info->argv);
-	info->argv = NULL;
-	info->path = NULL;
-	if (all)
-	{
-		if (!info->cmd_buf)
-		{
-			free(info->arg);
-		}
-		if (info->env)
-		{
-			free_list(&(info->env));
-		}
-		if (info->history)
-		{
-			free_list(&(info->history));
-		}
-		if (info->alias)
-		ffree(info->environ);
-			info->environ = NULL;
-		bfree((void **)info->cmd_buf);
-		if (info->readfd > 2)
-		{
-			close(info->readfd);
-		}
-		_putchar(BUF_FLUSH);
-	}
-}
 
 /**
- * clear_info - initializes info_t struct
- * @info: struct address
+ * cmp_env_name - compares env variables names
+ * with the name passed.
+ * @nenv: name of the environment variable
+ * @name: name passed
+ *
+ * Return: 0 if are not equal. Another value if they are.
  */
-void clear_info(info_t *info)
+int cmp_env_name(const char *nenv, const char *name)
 {
-	info->arg = NULL;
-	info->argv = NULL;
-	info->path = NULL;
-	info->argc = 0;
+	int i;
+
+	for (i = 0; nenv[i] != '='; i++)
+	{
+		if (nenv[i] != name[i])
+		{
+			return (0);
+		}
+	}
+
+	return (i + 1);
 }
